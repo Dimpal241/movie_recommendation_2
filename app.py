@@ -101,7 +101,23 @@ def load_model():
 @st.cache_data
 def load_data():
     """Load movie catalog and precomputed embeddings"""
-    if not os.path.exists('movies_data.pkl') or not os.path.exists('embeddings.npy'):
+    need_prepare = not os.path.exists('movies_data.pkl') or not os.path.exists('embeddings.npy')
+
+    if not need_prepare:
+        try:
+            emb = np.load('embeddings.npy')
+            # If SBERT is available, embeddings must have 384 dimensions
+            if HAS_SBERT and emb.shape[1] != 384:
+                need_prepare = True
+            elif not HAS_SBERT and os.path.exists('vectorizer.pkl'):
+                with open('vectorizer.pkl', 'rb') as f:
+                    vec = pickle.load(f)
+                    if hasattr(vec, 'vocabulary_') and emb.shape[1] != len(vec.vocabulary_):
+                        need_prepare = True
+        except Exception:
+            need_prepare = True
+
+    if need_prepare:
         import prepare_data
         prepare_data.prepare_and_embed()
 
@@ -239,14 +255,33 @@ def main():
             btn_query = st.button("Discover", type="primary", use_container_width=True)
 
         if btn_query and user_query.strip():
-            if HAS_SBERT and hasattr(model, 'encode'):
+            # If model supports SBERT and embeddings are 384-d
+            if HAS_SBERT and hasattr(model, 'encode') and embeddings.shape[1] == 384:
                 query_vector = model.encode([user_query])
             elif hasattr(model, 'transform'):
                 query_vector = model.transform([user_query]).toarray()
+            elif os.path.exists('vectorizer.pkl'):
+                with open('vectorizer.pkl', 'rb') as f:
+                    vec = pickle.load(f)
+                    query_vector = vec.transform([user_query]).toarray()
+            elif HAS_SBERT and hasattr(model, 'encode'):
+                # In case embeddings are not 384-d yet, re-embed movies catalog to match
+                import prepare_data
+                prepare_data.prepare_and_embed()
+                movies_df, embeddings = load_data()
+                query_vector = model.encode([user_query])
             else:
                 query_vector = np.zeros((1, embeddings.shape[1]))
 
             query_vector = np.array(query_vector, dtype=np.float32)
+
+            # Safeguard against any remaining shape discrepancy
+            if query_vector.shape[1] != embeddings.shape[1]:
+                import prepare_data
+                prepare_data.prepare_and_embed()
+                st.cache_data.clear()
+                st.rerun()
+
             sim_scores = cosine_similarity(query_vector, embeddings)[0]
             final_scores = compute_hybrid_scores(sim_scores, movies_df, w_sim, w_vote, w_pop)
 
