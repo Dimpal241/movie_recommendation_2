@@ -39,10 +39,8 @@ An intelligent movie recommendation and discovery engine that moves beyond simpl
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/Dimpal241/semantic-movie-recommender.git
-cd semantic-movie-recommender
-```
-
+git clone [https://github.com/Dimpal241/movie_recommendation_2.git](https://github.com/Dimpal241/movie_recommendation_2.git)
+cd movie_recommendation_2
 ### 2. Install dependencies
 ```bash
 pip install -r requirements.txt
@@ -68,9 +66,7 @@ streamlit run app.py
 ```
 
 ---
-
 ## 📊 Evaluation & Mathematical Formulation
-
-- **Similarity Metric:** Cosine Distance $\cos(\theta) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2}$
+- **Similarity Metric:** Cosine Similarity — $\cos(\theta) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2}$
 - **Normalization:** Min-Max scaling on bounded ratings $[0, 10]$ and unbounded popularity metrics.
 - **Latency:** Sub-120ms vector retrieval and re-ranking for top-$k$ candidates.
